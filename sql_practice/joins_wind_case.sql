@@ -1,0 +1,108 @@
+-- Vamsee Narahari
+-- Final Exam
+DROP TABLE IF EXISTS #Numbers;
+GO
+
+CREATE TABLE #Numbers
+(
+NumValue INTEGER
+);
+INSERT INTO #Numbers VALUES
+(0), (8),(14),(15),(16),(28),(29),(30),(31),
+(32),(33),(34),(35),(36),(53),(54),(55);
+
+WITH CTE AS 
+(
+SELECT  
+
+    NUMVALUE
+    ,LAG(NUMVALUE) OVER(ORDER BY NUMVALUE) AS LAG_VALUE
+    ,NUMVALUE-(COALESCE(LAG(NUMVALUE) OVER(ORDER BY NUMVALUE) + 1,0)) AS NUM_MISSING
+FROM 
+    #NUMBERS
+)
+SELECT  
+    SUM(NUM_MISSING) AS TOTAL_MISSING
+FROM 
+    CTE;
+
+CREATE TABLE #Cities
+(
+id INTEGER,
+name VARCHAR(50)
+);
+INSERT INTO #Cities VALUES
+(1, 'London'),
+(2, 'Cambridge'),
+(3, 'Brighton'),
+(4, 'Oxford');
+
+DROP TABLE IF EXISTS #Road;
+GO
+
+CREATE TABLE #Road
+(
+CityFrom INTEGER,
+CityTo INTEGER,
+Time INTEGER
+);
+INSERT INTO #Road VALUES
+(1, 2, 90),
+(1, 3, 102),
+(1, 4, 90),
+(2, 3, 125),
+(2, 4, 70),
+(3, 2, 105),
+(3, 4, 120),
+(4, 2, 125),
+(4, 3, 120);
+
+-- Write your query below...
+
+WITH CTE_RECUR AS 
+(
+SELECT
+    CAST(CF.NAME + '-'+CT.NAME AS VARCHAR(5000)) AS PATH
+    ,CITYTO AS LASTID
+    ,TIME  AS TOTALTIME
+    ,2 AS COUNTPLACES
+FROM 
+    #ROAD R
+INNER JOIN
+    #CITIES CF
+ON 
+    R.CityFrom = CF.ID
+INNER JOIN 
+    #CITIES CT
+ON 
+    R.CityTo = CT.ID
+WHERE 
+    CF.NAME = 'London'
+UNION ALL
+SELECT 
+    CAST(B.PATH + '-'+C.NAME AS VARCHAR(5000)) AS PATH
+    ,R.CITYTO AS LASTID
+    ,B.TOTALTIME + R.TIME AS TOTALTIME
+    ,COUNTPLACES + 1  AS COUNTPLACES
+FROM 
+    CTE_RECUR B 
+INNER JOIN 
+    #ROAD R
+ON 
+    B.LASTID = R.CityFrom
+INNER JOIN
+    #CITIES C
+ON 
+    C.ID = R.CityTo
+AND 
+    B.PATH  NOT LIKE '%' + C.NAME + '%' 
+
+)
+SELECT 
+    *
+FROM 
+    CTE_RECUR
+WHERE   
+    COUNTPLACES = 4
+ORDER BY 
+    TOTALTIME DESC;
